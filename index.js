@@ -12,13 +12,16 @@ const {
 } = require("discord.js");
 
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds]
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages
+  ]
 });
 
 const commands = [
   {
     name: "panel",
-    description: "Ticket paneli gönderir"
+    description: "Ticket paneli gönder"
   }
 ];
 
@@ -27,10 +30,16 @@ const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
 client.once("ready", async () => {
   console.log(`${client.user.tag} aktif`);
 
-  await rest.put(
-    Routes.applicationCommands(client.user.id),
-    { body: commands }
-  );
+  try {
+    await rest.put(
+      Routes.applicationCommands(client.user.id),
+      { body: commands }
+    );
+
+    console.log("Slash komut yüklendi");
+  } catch (err) {
+    console.log(err);
+  }
 });
 
 client.on("interactionCreate", async interaction => {
@@ -66,17 +75,16 @@ client.on("interactionCreate", async interaction => {
           .setStyle(ButtonStyle.Secondary)
       );
 
-      interaction.reply({
+      await interaction.reply({
         embeds: [embed],
         components: [row]
       });
     }
   }
 
-  // Buttons
+  // Butonlar
   if (interaction.isButton()) {
 
-    // Ticket açma
     if (
       interaction.customId === "destek" ||
       interaction.customId === "sikayet" ||
@@ -84,7 +92,7 @@ client.on("interactionCreate", async interaction => {
       interaction.customId === "satin"
     ) {
 
-      const kanal = await interaction.guild.channels.create({
+      const channel = await interaction.guild.channels.create({
         name: `${interaction.customId}-${interaction.user.username}`,
         type: ChannelType.GuildText,
 
@@ -104,20 +112,20 @@ client.on("interactionCreate", async interaction => {
         ]
       });
 
-      const kapat = new ActionRowBuilder().addComponents(
+      const closeRow = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId("kapat")
           .setLabel("Ticket Kapat")
           .setStyle(ButtonStyle.Danger)
       );
 
-      kanal.send({
+      await channel.send({
         content: `Hoş geldin ${interaction.user}`,
-        components: [kapat]
+        components: [closeRow]
       });
 
-      interaction.reply({
-        content: `Ticket açıldı: ${kanal}`,
+      await interaction.reply({
+        content: `Ticket açıldı: ${channel}`,
         ephemeral: true
       });
     }
